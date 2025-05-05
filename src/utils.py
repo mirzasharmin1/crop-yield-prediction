@@ -37,5 +37,27 @@ def add_country_to_df(df, countries_df, lat_col_name='latitude', lon_col_name='l
 
         result[within_radius] = country_names[i]
 
-    df['country'] = result
+    df['Country'] = result
+
+    df = df.drop([lat_col_name, lon_col_name], axis=1)
+    if 'year' in df.columns:
+        df = df.rename(columns={'year': 'Year'})
+
     return df
+
+
+def one_hot_encode_keep_original(df, column_name, insert_after_col):
+    # Create dummy variables
+    dummies = pd.get_dummies(df[column_name], prefix=column_name, dtype=float)
+
+    # Find the position to insert the dummies
+    col_index = df.columns.get_loc(insert_after_col)
+
+    # Split df into 3 parts: before, the column, after
+    before = df.iloc[:, :col_index + 1]
+    after = df.iloc[:, col_index + 1:]
+
+    # Concatenate: before + dummies + after
+    df_new = pd.concat([before, dummies, after], axis=1)
+
+    return df_new
