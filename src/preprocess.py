@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-
+from sklearn.preprocessing import MinMaxScaler
 from src.utils import one_hot_encode_keep_original
 
 
@@ -45,29 +45,27 @@ def merge_data(
 
 def scale_data(merged_df):
     exclude_cols = ['Country', 'Year']
-    cols_to_scale = [col for col in merged_df.columns if col not in exclude_cols]
+    yield_cols = [col for col in merged_df.columns if col.endswith('_Yield')]
+    other_cols = [col for col in merged_df.columns if col not in exclude_cols + yield_cols]
 
     df_scaled = merged_df.copy()
 
-    all_values = df_scaled[cols_to_scale].values.flatten()
-    global_min = np.nanmin(all_values)
-    global_max = np.nanmax(all_values)
+    other_scaler = MinMaxScaler()
+    yield_scaler = MinMaxScaler()
 
-    if global_max == global_min:
-        raise ValueError("Global max and min are the same. Cannot perform scaling.")
+    df_scaled[other_cols] = other_scaler.fit_transform(df_scaled[other_cols])
+    df_scaled[yield_cols] = yield_scaler.fit_transform(df_scaled[yield_cols])
 
-    df_scaled[cols_to_scale] = (df_scaled[cols_to_scale] - global_min) / (global_max - global_min)
+    scalers = {
+        'yield_scaler': yield_scaler,
+        'feature_scaler': other_scaler,
+    }
 
-    scaler = {'global_min': global_min, 'global_max': global_max}
-
-    return df_scaled, scaler
+    return df_scaled, scalers
 
 
 def unscale_data(scaled_array, scaler):
-    global_min = scaler['global_min']
-    global_max = scaler['global_max']
-
-    unscaled_array = scaled_array * (global_max - global_min) + global_min
+    unscaled_array = scaler.inverse_transform(scaled_array)
     return unscaled_array
 
 
